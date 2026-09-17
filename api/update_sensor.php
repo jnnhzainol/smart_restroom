@@ -1,30 +1,47 @@
 <?php
 include '../config.php';
 
-$soap = intval($_GET['soap'] ?? -1);
-$waste = intval($_GET['waste'] ?? -1);
+if (getenv('APP_ENV') === 'production') {
+    $expectedKey = getenv('SENSOR_API_KEY');
+    $providedKey = $_SERVER['HTTP_X_SENSOR_KEY'] ?? '';
+    if (!$expectedKey || !hash_equals($expectedKey, $providedKey)) {
+        http_response_code(401);
+        exit('Unauthorized sensor');
+    }
+}
 
-if ($soap < 0 || $waste < 0) {
+// 1. Ambil nilai peratusan waste daripada ESP32
+$waste = filter_var($_POST['waste'] ?? $_GET['waste'] ?? null, FILTER_VALIDATE_INT);
+
+if ($waste === false || $waste === null || $waste < 0 || $waste > 100) {
+    http_response_code(400);
     echo "Missing data";
     exit;
 }
 
-$s = $conn->query("SELECT * FROM settings WHERE id=1")->fetch_assoc();
-$status = "Normal";
-if ($soap < $s['soap_threshold'] || $waste > $s['waste_threshold']) {
-    $status = "Attention Needed";
+// 2. Semak threshold dari settings
+$waste_threshold = 80;
+$s_result = $conn->query("SELECT * FROM settings WHERE id=1");
+if ($s_result && $s_result->num_rows > 0) {
+    $s = $s_result->fetch_assoc();
+    if (isset($s['waste_threshold'])) {
+        $waste_threshold = $s['waste_threshold'];
+    }
 }
 
-$stmt = $conn->prepare("INSERT INTO sensor_data (soap_level, waste_level, status) VALUES (?, ?, ?)");
-$stmt->bind_param("iis", $soap, $waste, $status);
-$stmt->execute();
+// 3. Tetapkan maklumat sensor
+$sensor_type = 'waste';
+$reading_value = $waste;
+$location = 'Restroom 1';
 
-if ($soap < $s['soap_threshold']) {
-    $conn->query("INSERT INTO alerts (type, message) VALUES ('Soap Low', 'Soap level is below {$s['soap_threshold']}%')");
-}
-if ($waste > $s['waste_threshold']) {
-    $conn->query("INSERT INTO alerts (type, message) VALUES ('Waste High', 'Waste bin is above {$s['waste_threshold']}%')");
-}
+// 4. Masukkan data ke jadual sensor_data
+$stmt = $conn->prepare("INSERT INTO sensor_data (sensor_type, reading_value, location) VALUES (?, ?, ?)");
+$stmt->bind_param("sds", $sensor_type, $reading_value, $location);
 
-echo "OK";
+if ($stmt->execute()) {
+    echo "OK";
+} else {
+    http_response_code(500);
+    echo "Unable to save sensor reading";
+}
 ?>

@@ -1,0 +1,6 @@
+.git
+.codex
+.agents
+*.sql
+.env*
+create_admin.php

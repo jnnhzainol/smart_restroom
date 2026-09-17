@@ -13,6 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($row = $result->fetch_assoc()) {
         if (password_verify($password, $row['password'])) {
+            session_regenerate_id(true);
             $_SESSION['user_id'] = $row['id'];
             $_SESSION['user_name'] = $row['name'];
 
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     const togglePassword = document.getElementById('togglePassword');
     const passwordField = document.getElementById('passwordField');
 
-    togglePassword.addEventListener('click', function () {
+    togglePassword?.addEventListener('click', function () {
         const isPassword = passwordField.type === 'password';
 
         passwordField.type = isPassword ? 'text' : 'password';

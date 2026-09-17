@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="panel full">
                 <h3> My Profile</h3>
                 <?php if ($msg): ?><div class="alert-success"><?= $msg ?></div><?php endif; ?>
-                <p><b>Name:</b> <?= $user['name'] ?></p>
-                <p><b>Email:</b> <?= $user['email'] ?></p>
+                <p><b>Name:</b> <?= htmlspecialchars($user['name']) ?></p>
+                <p><b>Email:</b> <?= htmlspecialchars($user['email']) ?></p>
                 <form method="POST" class="settings-form">
                     <label>New Password</label>
                     <input type="password" name="new_password" placeholder="Leave blank if not changing">
